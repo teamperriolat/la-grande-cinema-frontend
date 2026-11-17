@@ -1,0 +1,7 @@
+body { font-family: sans-serif; max-width: 900px; margin: 1rem auto; padding: 0 1rem; }
+form, section { border: 1px solid #999; padding: 1rem; margin: 1rem 0; }
+label { display: block; margin: .5rem 0; }
+input, select, button { margin: .25rem; padding: .4rem; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #999; padding: .4rem; text-align: left; }
+[role="alert"] { color: #900; }
