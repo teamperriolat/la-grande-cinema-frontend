@@ -25,6 +25,6 @@ export default function App() {
     {error && <p role="alert">{error}</p>}
     <h2>Films et séances</h2>
     {movies.map(movie => <section key={movie.id}><h3>{movie.title}</h3><p>{movie.description} — {movie.durationMin} min</p><ul>{movie.screenings.map(screening => <li key={screening.id}>{new Date(screening.startsAt).toLocaleString('fr-FR')} — {screening.room} — {(screening.priceCents / 100).toFixed(2)} € <button onClick={() => setScreeningId(screening.id)}>Voir les places</button></li>)}</ul></section>)}
-    {screeningId && <SeatPicker key={screeningId} screeningId={screeningId} />}
+    {screeningId && <SeatPicker key={screeningId} screeningId={screeningId} canReserve={Boolean(user)} />}
   </main>;
 }
