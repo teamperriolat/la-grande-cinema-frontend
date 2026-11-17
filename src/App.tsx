@@ -21,7 +21,7 @@ export default function App() {
   }
 
   return <main>
-    <h1>La Grande Cinéma</h1>
+    <h1>Le Grand Cinéma</h1>
     {!user ? <form onSubmit={login}><h2>Connexion</h2><label>E-mail <input name="email" type="email" required defaultValue="user@demo.cinema" /></label><label>Mot de passe <input name="password" type="password" required defaultValue="DemoUser123!" /></label><button>Se connecter</button></form> : <p>Connecté : {user.email} ({user.role}) <button onClick={() => { localStorage.clear(); setUser(null); }}>Déconnexion</button></p>}
     {error && <p role="alert">{error}</p>}
     <h2>Films et séances</h2>

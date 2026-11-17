@@ -1,4 +1,4 @@
-# La Grande Cinéma — Frontend
+# Le Grand Cinéma — Frontend
 
 Interface React/Vite/TypeScript volontairement simple pour consulter les séances, réserver des places, afficher un billet numérique et consulter l’administration.
 
