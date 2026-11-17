@@ -6,6 +6,8 @@ dist/
 build/
 coverage/
 *.tsbuildinfo
+vite.config.js
+vite.config.d.ts
 
 # Environment files (keep the documented example)
 .env
