@@ -22,20 +22,29 @@ const statusLabels: Record<string, string> = {
   CANCELLED: "Annulée",
 };
 
-export default function AdminPanel({ movies }: { movies: Movie[] }) {
-  const [createdMovies, setCreatedMovies] = useState<Movie[]>([]);
+function toDateTimeLocal(value: string) {
+  const date = new Date(value);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+    .toISOString()
+    .slice(0, 16);
+}
+
+interface AdminPanelProps {
+  movies: Movie[];
+  onMoviesChange: () => Promise<void>;
+}
+
+export default function AdminPanel({
+  movies,
+  onMoviesChange,
+}: AdminPanelProps) {
   const [analytics, setAnalytics] = useState<Analytics[]>([]);
   const [reservations, setReservations] = useState<AdminReservation[]>([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busyForm, setBusyForm] = useState<"movie" | "screening" | null>(null);
-
-  const availableMovies = [
-    ...movies,
-    ...createdMovies.filter(
-      (created) => !movies.some((movie) => movie.id === created.id),
-    ),
-  ];
+  const [busyMovieId, setBusyMovieId] = useState<string | null>(null);
+  const [busyScreeningId, setBusyScreeningId] = useState<string | null>(null);
 
   function refresh() {
     void api<Analytics[]>("/admin/analytics").then(setAnalytics);
@@ -61,7 +70,7 @@ export default function AdminPanel({ movies }: { movies: Movie[] }) {
           durationMin: Number(data.get("durationMin")),
         }),
       });
-      setCreatedMovies((items) => [...items, movie]);
+      await onMoviesChange();
       setMessage(
         `Le film « ${movie.title} » est créé et disponible pour une séance.`,
       );
@@ -70,6 +79,108 @@ export default function AdminPanel({ movies }: { movies: Movie[] }) {
       setError((caughtError as Error).message);
     } finally {
       setBusyForm(null);
+    }
+  }
+
+  async function updateMovie(event: FormEvent<HTMLFormElement>, id: string) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    setBusyMovieId(id);
+    const data = new FormData(event.currentTarget);
+
+    try {
+      const movie = await api<Movie>(`/admin/movies/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          title: data.get("title"),
+          description: data.get("description"),
+          durationMin: Number(data.get("durationMin")),
+        }),
+      });
+      await onMoviesChange();
+      setMessage(`Le film « ${movie.title} » a été modifié.`);
+    } catch (caughtError) {
+      setError((caughtError as Error).message);
+    } finally {
+      setBusyMovieId(null);
+    }
+  }
+
+  async function deleteMovie(id: string, title: string) {
+    if (
+      !window.confirm(
+        `Supprimer définitivement le film « ${title} » et ses séances ?`,
+      )
+    ) {
+      return;
+    }
+    setError("");
+    setMessage("");
+    setBusyMovieId(id);
+
+    try {
+      await api(`/admin/movies/${id}`, { method: "DELETE" });
+      await onMoviesChange();
+      setMessage(`Le film « ${title} » a été supprimé.`);
+      refresh();
+    } catch (caughtError) {
+      setError((caughtError as Error).message);
+    } finally {
+      setBusyMovieId(null);
+    }
+  }
+
+  async function updateScreening(
+    event: FormEvent<HTMLFormElement>,
+    id: string,
+  ) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    setBusyScreeningId(id);
+    const data = new FormData(event.currentTarget);
+
+    try {
+      await api(`/admin/screenings/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          startsAt: data.get("startsAt"),
+          room: data.get("room"),
+          priceCents: Math.round(Number(data.get("priceEuros")) * 100),
+        }),
+      });
+      await onMoviesChange();
+      setMessage("La séance a été modifiée.");
+      refresh();
+    } catch (caughtError) {
+      setError((caughtError as Error).message);
+    } finally {
+      setBusyScreeningId(null);
+    }
+  }
+
+  async function deleteScreening(id: string, movieTitle: string) {
+    if (
+      !window.confirm(
+        `Supprimer définitivement cette séance de « ${movieTitle} » ?`,
+      )
+    ) {
+      return;
+    }
+    setError("");
+    setMessage("");
+    setBusyScreeningId(id);
+
+    try {
+      await api(`/admin/screenings/${id}`, { method: "DELETE" });
+      await onMoviesChange();
+      setMessage(`La séance de « ${movieTitle} » a été supprimée.`);
+      refresh();
+    } catch (caughtError) {
+      setError((caughtError as Error).message);
+    } finally {
+      setBusyScreeningId(null);
     }
   }
 
@@ -202,7 +313,7 @@ export default function AdminPanel({ movies }: { movies: Movie[] }) {
                 <option value="" disabled>
                   Sélectionner un film
                 </option>
-                {availableMovies.map((movie) => (
+                {movies.map((movie) => (
                   <option key={movie.id} value={movie.id}>
                     {movie.title}
                   </option>
@@ -256,6 +367,143 @@ export default function AdminPanel({ movies }: { movies: Movie[] }) {
           </form>
         </article>
       </div>
+
+      <article className="admin-data-card movie-manager-card">
+        <div className="admin-card-heading compact">
+          <div>
+            <h3>Modifier ou supprimer un film</h3>
+            <p>
+              Mettez à jour le catalogue. Un film déjà réservé ne peut pas être
+              supprimé.
+            </p>
+          </div>
+        </div>
+        <div className="movie-manager-list">
+          {movies.length === 0 && (
+            <p className="empty-state">Aucun film dans le catalogue.</p>
+          )}
+          {movies.map((movie) => (
+            <form
+              className="movie-manager-item"
+              key={movie.id}
+              onSubmit={(event) => updateMovie(event, movie.id)}
+            >
+              <label>
+                Titre
+                <input name="title" defaultValue={movie.title} required />
+              </label>
+              <label>
+                Durée
+                <input
+                  name="durationMin"
+                  type="number"
+                  min="1"
+                  defaultValue={movie.durationMin}
+                  required
+                />
+              </label>
+              <label className="field-wide">
+                Description
+                <textarea
+                  name="description"
+                  rows={3}
+                  defaultValue={movie.description}
+                  required
+                />
+              </label>
+              <div className="movie-manager-actions field-wide">
+                <button
+                  className="button button-primary"
+                  disabled={busyMovieId !== null}
+                >
+                  {busyMovieId === movie.id ? "Enregistrement…" : "Enregistrer"}
+                </button>
+                <button
+                  className="button button-danger"
+                  type="button"
+                  disabled={busyMovieId !== null}
+                  onClick={() => deleteMovie(movie.id, movie.title)}
+                >
+                  Supprimer
+                </button>
+              </div>
+            </form>
+          ))}
+        </div>
+      </article>
+
+      <article className="admin-data-card movie-manager-card">
+        <div className="admin-card-heading compact">
+          <div>
+            <h3>Modifier ou supprimer une séance</h3>
+            <p>
+              Corrigez la date, la salle ou le prix. Une séance déjà réservée ne
+              peut pas être supprimée.
+            </p>
+          </div>
+        </div>
+        <div className="movie-manager-list">
+          {movies.every((movie) => movie.screenings.length === 0) && (
+            <p className="empty-state">Aucune séance programmée.</p>
+          )}
+          {movies.flatMap((movie) =>
+            movie.screenings.map((screening) => (
+              <form
+                className="screening-manager-item"
+                key={screening.id}
+                onSubmit={(event) => updateScreening(event, screening.id)}
+              >
+                <strong className="field-wide">{movie.title}</strong>
+                <label>
+                  Date et heure
+                  <input
+                    name="startsAt"
+                    type="datetime-local"
+                    defaultValue={toDateTimeLocal(screening.startsAt)}
+                    required
+                  />
+                </label>
+                <label>
+                  Salle
+                  <input name="room" defaultValue={screening.room} required />
+                </label>
+                <label>
+                  Prix par place
+                  <div className="input-with-suffix">
+                    <input
+                      name="priceEuros"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      defaultValue={(screening.priceCents / 100).toFixed(2)}
+                      required
+                    />
+                    <span>€</span>
+                  </div>
+                </label>
+                <div className="movie-manager-actions">
+                  <button
+                    className="button button-primary"
+                    disabled={busyScreeningId !== null}
+                  >
+                    {busyScreeningId === screening.id
+                      ? "Enregistrement…"
+                      : "Enregistrer"}
+                  </button>
+                  <button
+                    className="button button-danger"
+                    type="button"
+                    disabled={busyScreeningId !== null}
+                    onClick={() => deleteScreening(screening.id, movie.title)}
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              </form>
+            )),
+          )}
+        </div>
+      </article>
 
       <div className="admin-data-grid">
         <article className="admin-data-card">
