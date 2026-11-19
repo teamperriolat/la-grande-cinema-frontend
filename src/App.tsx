@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import AdminPanel from "./AdminPanel";
 import SeatPicker from "./SeatPicker";
 import { api } from "./api";
@@ -22,6 +22,11 @@ export default function App() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [screeningId, setScreeningId] = useState<string | null>(null);
+
+  const loadMovies = useCallback(async () => {
+    const catalog = await api<Movie[]>("/movies");
+    setMovies(catalog);
+  }, []);
 
   useEffect(() => {
     api<Movie[]>("/movies")
@@ -180,7 +185,9 @@ export default function App() {
         />
       )}
 
-      {user?.role === "ADMIN" && <AdminPanel movies={movies} />}
+      {user?.role === "ADMIN" && (
+        <AdminPanel movies={movies} onMoviesChange={loadMovies} />
+      )}
 
       {isLoginOpen && !user && (
         <div className="modal-backdrop" role="presentation">

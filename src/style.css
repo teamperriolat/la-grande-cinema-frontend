@@ -713,6 +713,48 @@ textarea:focus {
 .row-actions button:hover {
   border-color: var(--accent);
 }
+.movie-manager-card {
+  margin-top: 1.25rem;
+}
+.movie-manager-list {
+  display: grid;
+  gap: 1rem;
+}
+.movie-manager-item,
+.screening-manager-item {
+  display: grid;
+  grid-template-columns: 1fr 180px;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #10131d;
+}
+.screening-manager-item {
+  grid-template-columns: 1.35fr 0.75fr 0.65fr auto;
+  align-items: end;
+}
+.movie-manager-item label,
+.screening-manager-item label {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.movie-manager-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+.button-danger {
+  color: #ffd1d1;
+  border-color: rgba(255, 123, 123, 0.35);
+  background: rgba(136, 31, 31, 0.2);
+}
+.button-danger:hover:not(:disabled) {
+  background: rgba(166, 43, 43, 0.35);
+}
 
 @media (max-width: 760px) {
   .auth-card,
@@ -785,5 +827,19 @@ textarea:focus {
   }
   .field-wide {
     grid-column: auto;
+  }
+  .movie-manager-item,
+  .screening-manager-item {
+    grid-template-columns: 1fr;
+  }
+  .movie-manager-item .field-wide,
+  .screening-manager-item .field-wide {
+    grid-column: auto;
+  }
+  .movie-manager-actions {
+    justify-content: stretch;
+  }
+  .movie-manager-actions .button {
+    flex: 1;
   }
 }
